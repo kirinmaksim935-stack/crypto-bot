@@ -1,0 +1,95 @@
+import http.server
+import json
+import socketserver
+import threading
+import time
+import urllib.request
+
+# Твои данные
+TOKEN = "9141339225:AAE4xLdE72nF-vV..."  # Твой токен бота
+CHAT_ID = "6873754600"  # Твой Chat ID
+
+# Список тикеров для отслеживания через Yahoo Finance
+# XAUUSD=X - золото, BTC-USD - биткоин, ETH-USD - эфириум
+TICKERS = {"Gold (XAUUSD)": "GC=F", "Bitcoin": "BTC-USD", "Ethereum": "ETH-USD"}
+
+
+def send_telegram_message(text):
+  url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+  payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"}
+  data = json.dumps(payload).encode("utf-8")
+  req = urllib.request.Request(
+      url, data=data, headers={"Content-Type": "application/json"}
+  )
+  try:
+    with urllib.request.urlopen(req) as response:
+      return response.read()
+  except Exception as e:
+    print(f"Ошибка отправки сообщения: {e}")
+
+
+def get_crypto_price(symbol):
+  url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1m"
+  headers = {
+      "User-Agent": (
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      )
+  }
+  req = urllib.request.Request(url, headers=headers)
+  try:
+    with urllib.request.urlopen(req) as response:
+      data = json.loads(response.read().decode("utf-8"))
+      price = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
+      return price
+  except Exception as e:
+    print(f"Ошибка получения цены для {symbol}: {e}")
+    return None
+
+
+# --- МИНИ-СЕРВЕР ДЛЯ ПРЕДОТВРАЩЕНИЯ ЗАСЫПАНИЯ НА RENDER ---
+class PingHandler(http.server.SimpleHTTPRequestHandler):
+
+  def do_GET(self):
+    self.send_response(200)
+    self.end_headers()
+    self.wfile.write(b"Bot is alive and running 24/7!")
+
+  def log_message(self, format, *args):
+    # Отключаем лишние логи в консоли, чтобы не засорять вывод
+    pass
+
+
+def run_server():
+  port = 10000  # Стандартный порт, который слушает Render
+  with socketserver.TCPServer(("", port), PingHandler) as httpd:
+    print(f"HTTP-сервер запущен на порту {port}")
+    httpd.serve_forever()
+
+
+# Запускаем веб-сервер в отдельном потоке
+server_thread = threading.Thread(target=run_server, daemon=True)
+server_thread.start()
+# ---------------------------------------------------------
+
+
+def main():
+  send_telegram_message("✅ Бот успешно запущен и следит за рынком 24/7!")
+  print("Бот запущен...")
+
+  old_prices = {}
+
+  while True:
+    for name, ticker in TICKERS.items():
+      price = get_crypto_price(ticker)
+      if price is not None:
+        print(f"{name}: {price}")
+        # Пример логики: если цена изменилась, можно отправлять уведомление
+        # Сейчас сделаем отправку при первом запуске или каждые N часов,
+        # либо можно настроить уведомления по условию.
+        # Для теста пока просто держим цикл рабочим.
+
+    time.sleep(300)  # Пауза 5 минут перед следующим запросом
+
+
+if __name__ == "__main__":
+  main()
