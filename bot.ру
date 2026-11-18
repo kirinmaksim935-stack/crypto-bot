@@ -6,7 +6,7 @@ import time
 import urllib.request
 
 # Твои данные
-TOKEN = "9141339225:AAE4xLdE72nF-vV..."  # Твой токен бота
+TOKEN = "9141339225:AAEvfM3V04nl04uYXt-UlPDoTig82JGcoeM"  # Твой токен бота
 CHAT_ID = "6873754600"  # Твой Chat ID
 
 # Список тикеров для отслеживания через Yahoo Finance
